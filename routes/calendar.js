@@ -24,11 +24,31 @@ router.get('/', async function (req, res, next) {
       .andWhere('event_date', '<=', monthEnd)
       .orderBy('event_date', 'asc');
 
+    const today = new Date().toISOString().slice(0, 10);
+    const alerts = events.filter(function (event) {
+      if (!event.notify_popup || !event.notify_popup_interval) {
+        return false;
+      }
+      const diffInDays = Math.round((new Date(event.event_date) - new Date(today)) / 86400000);
+      return (
+        (event.notify_popup_interval === 'same_day' && diffInDays === 0) ||
+        (event.notify_popup_interval === 'one_day_before' && diffInDays === 1) ||
+        (event.notify_popup_interval === 'two_days_before' && diffInDays === 2)
+      );
+    }).map(function (event) {
+      return {
+        title: event.title,
+        event_date: event.event_date,
+        interval: event.notify_popup_interval,
+      };
+    });
+
     res.render('calendar', {
       title: 'Calendar',
       isAuth: true,
       selectedDate: validDate.toISOString().slice(0, 10),
       events: events,
+      alerts: alerts,
       successMessage: req.session?.successMessage ? [req.session.successMessage] : [],
       errorMessage: [],
     });
@@ -42,6 +62,7 @@ router.get('/', async function (req, res, next) {
       isAuth: true,
       selectedDate: validDate.toISOString().slice(0, 10),
       events: [],
+      alerts: [],
       errorMessage: [err.sqlMessage || '予定の読み込みに失敗しました'],
       successMessage: [],
     });
@@ -58,6 +79,13 @@ router.post('/add', function (req, res, next) {
   const description = req.body.description?.trim() || null;
   const eventDate = req.body.event_date;
 
+  const notifyPopup = req.body.notify_popup === '1';
+  const notifyEmail = req.body.notify_email === '1';
+  const notifySms = req.body.notify_sms === '1';
+  const notifyPopupInterval = notifyPopup ? req.body.notify_popup_interval : 'none';
+  const notifyEmailInterval = notifyEmail ? req.body.notify_email_interval : 'none';
+  const notifySmsInterval = notifySms ? req.body.notify_sms_interval : 'none';
+
   if (!title || !eventDate) {
     req.session.successMessage = null;
     return res.render('calendar', {
@@ -65,13 +93,25 @@ router.post('/add', function (req, res, next) {
       isAuth: true,
       selectedDate: eventDate || new Date().toISOString().slice(0, 10),
       events: [],
+      alerts: [],
       errorMessage: ['予定名と日時を入力してください'],
       successMessage: [],
     });
   }
 
   knex('events')
-    .insert({ user_id: userId, title: title, description: description, event_date: eventDate })
+    .insert({
+      user_id: userId,
+      title: title,
+      description: description,
+      event_date: eventDate,
+      notify_popup: notifyPopup,
+      notify_popup_interval: notifyPopupInterval,
+      notify_email: notifyEmail,
+      notify_email_interval: notifyEmailInterval,
+      notify_sms: notifySms,
+      notify_sms_interval: notifySmsInterval,
+    })
     .then(function () {
       req.session.successMessage = '予定を追加しました';
       res.redirect('/calendar');
