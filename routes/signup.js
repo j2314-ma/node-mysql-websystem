@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const knex = require("../db/knex");
-const bcrypt = require("bcrypt");
+const { sanitizeUsername, hashPassword } = require('../lib/security');
 
 router.get('/', function (req, res, next) {
   const isAuth = req.isAuthenticated();
@@ -13,9 +13,17 @@ router.get('/', function (req, res, next) {
 
 router.post('/', function (req, res, next) {
   const isAuth = req.isAuthenticated();
-  const username = req.body.username;
+  const username = sanitizeUsername(req.body.username);
   const password = req.body.password;
   const repassword = req.body.repassword;
+
+  if (!username || !password || !repassword) {
+    return res.render("signup", {
+      title: "Sign up",
+      errorMessage: ["ユーザー名とパスワードを入力してください"],
+      isAuth: isAuth,
+    });
+  }
 
   knex("users")
     .where({name: username})
@@ -28,7 +36,7 @@ router.post('/', function (req, res, next) {
           isAuth: isAuth,
         })
       } else if (password === repassword) {
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await hashPassword(password);
         knex("users")
           .insert({name: username, password: hashedPassword})
           .then(function () {
@@ -38,7 +46,7 @@ router.post('/', function (req, res, next) {
             console.error(err);
             res.render("signup", {
               title: "Sign up",
-              errorMessage: [err.sqlMessage],
+              errorMessage: [err.sqlMessage || "登録に失敗しました"],
               isAuth: isAuth,
             });
           });
@@ -54,7 +62,7 @@ router.post('/', function (req, res, next) {
       console.error(err);
       res.render("signup", {
         title: "Sign up",
-        errorMessage: [err.sqlMessage],
+        errorMessage: [err.sqlMessage || "登録処理に失敗しました"],
         isAuth: isAuth,
       });
     });
