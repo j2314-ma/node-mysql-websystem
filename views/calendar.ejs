@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title><%= title %></title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"
+        integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+</head>
+<body>
+<%- include('./header'); %>
+<%- include('./error_messages'); %>
+<div class="container mt-4">
+  <h1>Calendar</h1>
+  <form action="/calendar" method="get" class="form-inline mb-3">
+    <label class="mr-2">表示する月</label>
+    <input type="month" name="date" class="form-control mr-2" value="<%= selectedDate.slice(0,7) %>" onchange="this.form.submit()" />
+    <noscript><button class="btn btn-secondary">表示</button></noscript>
+  </form>
+
+  <div class="row">
+    <div class="col-md-6">
+      <h2>予定一覧</h2>
+      <% const intervalLabels = { same_day: '当日', one_day_before: '1日前', two_days_before: '2日前', none: 'なし' }; %>
+      <% if(alerts && alerts.length > 0) { %>
+        <div class="alert alert-warning" role="alert">
+          <strong>通知アラート:</strong>
+          <ul class="mb-0">
+            <% for(const alert of alerts) { %>
+              <li><%= alert.event_date %> の "<%= alert.title %>" に通知があります。</li>
+            <% } %>
+          </ul>
+        </div>
+      <% } %>
+      <% if(events.length === 0) { %>
+        <p>この月の予定はありません。</p>
+      <% } else { %>
+        <ul class="list-group">
+          <% for(const event of events) { %>
+            <li class="list-group-item d-flex justify-content-between align-items-start">
+              <div>
+                <strong><%= event.event_date %></strong> - <%= event.title %>
+                <% if(event.description){ %>
+                  <div><small><%= event.description %></small></div>
+                <% } %>
+                <div class="mt-2">
+                  <small>
+                    通知: 
+                    ポップアップ(<%= event.notify_popup ? intervalLabels[event.notify_popup_interval || 'none'] : 'OFF' %>), 
+                    メール(<%= event.notify_email ? intervalLabels[event.notify_email_interval || 'none'] : 'OFF' %>), 
+                    SMS(<%= event.notify_sms ? intervalLabels[event.notify_sms_interval || 'none'] : 'OFF' %>)
+                  </small>
+                </div>
+              </div>
+              <form action="/calendar/delete" method="post" onsubmit="return confirm('この予定を削除しますか？');">
+                <input type="hidden" name="id" value="<%= event.id %>" />
+                <button type="submit" class="btn btn-danger btn-sm">削除</button>
+              </form>
+            </li>
+          <% } %>
+        </ul>
+      <% } %>
+    </div>
+    <div class="col-md-6">
+      <h2>予定を追加</h2>
+      <form action="/calendar/add" method="post">
+        <div class="form-group">
+          <label>予定名</label>
+          <input required type="text" name="title" class="form-control" placeholder="予定のタイトル" />
+        </div>
+        <div class="form-group">
+          <label>説明</label>
+          <textarea name="description" class="form-control" rows="3" placeholder="説明（任意）"></textarea>
+        </div>
+        <div class="form-group">
+          <label>日付</label>
+          <input required type="date" name="event_date" class="form-control" value="<%= selectedDate %>" />
+        </div>
+        <div class="form-group">
+          <label>通知設定</label>
+          <div class="form-row">
+            <div class="col-12 mb-2">
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="notify_popup" name="notify_popup" value="1" />
+                <label class="form-check-label" for="notify_popup">ポップアップ通知</label>
+              </div>
+              <select class="form-control mt-2" name="notify_popup_interval">
+                <option value="none">なし</option>
+                <option value="same_day">当日</option>
+                <option value="one_day_before">1日前</option>
+                <option value="two_days_before">2日前</option>
+              </select>
+            </div>
+            <div class="col-12 mb-2">
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="notify_email" name="notify_email" value="1" />
+                <label class="form-check-label" for="notify_email">メール通知</label>
+              </div>
+              <select class="form-control mt-2" name="notify_email_interval">
+                <option value="none">なし</option>
+                <option value="same_day">当日</option>
+                <option value="one_day_before">1日前</option>
+                <option value="two_days_before">2日前</option>
+              </select>
+            </div>
+            <div class="col-12 mb-2">
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="notify_sms" name="notify_sms" value="1" />
+                <label class="form-check-label" for="notify_sms">SMS通知</label>
+              </div>
+              <select class="form-control mt-2" name="notify_sms_interval">
+                <option value="none">なし</option>
+                <option value="same_day">当日</option>
+                <option value="one_day_before">1日前</option>
+                <option value="two_days_before">2日前</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">追加</button>
+      </form>
+    </div>
+  </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js"
+        integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut"
+        crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js"
+        integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k"
+        crossorigin="anonymous"></script>
+<% if (alerts && alerts.length > 0) { %>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var calendarAlerts = <%- JSON.stringify(alerts) %>;
+    calendarAlerts.forEach(function (item) {
+      alert('通知: ' + item.event_date + ' の "' + item.title.replace(/"/g, '\\"') + '" が近づいています。');
+    });
+  });
+</script>
+<% } %>
+</body>
+</html>
