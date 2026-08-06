@@ -4,7 +4,8 @@ const knex = require("../db/knex");
 const bcrypt = require("bcrypt");
 const User = require("../models/user");
 const cookieSession = require("cookie-session");
-const secret = "secretCuisine123";
+const { sanitizeUsername } = require('../lib/security');
+const secret = process.env.SESSION_SECRET || "secretCuisine123";
 
 module.exports = function (app) {
   passport.serializeUser(function (user, done) {
@@ -26,9 +27,11 @@ module.exports = function (app) {
       usernameField: "username",
       passwordField: "password",
     }, function (username, password, done) {
+      const normalizedUsername = sanitizeUsername(username);
+
       knex("users")
         .where({
-          name: username,
+          name: normalizedUsername,
         })
         .select("*")
         .then(async function (results) {
