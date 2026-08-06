@@ -1,4 +1,15 @@
 <% if (typeof errorMessage === 'undefined') { var errorMessage = []; } %>
+<% if (typeof successMessage === 'undefined') { var successMessage = []; } %>
+<% if(successMessage.length != 0){ %>
+  <div style="color: green;">
+    <strong>Success!</strong>
+    <ul>
+      <% for(let item of successMessage){ %>
+        <li><%= item %></li>
+      <% } %>
+    </ul>
+  </div>
+<% } %>
 <% if(errorMessage.length != 0){ %>
   <div>
     <strong>Warning!</strong> The form contains <%= errorMessage.length %> errors.
