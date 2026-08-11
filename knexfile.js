@@ -8,6 +8,8 @@ const baseConfig = {
     database: process.env.DB_NAME || "todo_app",
     user: process.env.DB_USER || "root",
     password: process.env.DB_PASSWORD || "password",
+    charset: "utf8mb4",
+    collation: "utf8mb4_unicode_ci",
   },
   pool: {
     min: 2,

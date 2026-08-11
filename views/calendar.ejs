@@ -52,6 +52,7 @@
               </div>
               <form action="/calendar/delete" method="post" onsubmit="return confirm('この予定を削除しますか？');">
                 <input type="hidden" name="id" value="<%= event.id %>" />
+                <input type="hidden" name="date" value="<%= selectedDate %>" />
                 <button type="submit" class="btn btn-danger btn-sm">削除</button>
               </form>
             </li>
@@ -62,6 +63,7 @@
     <div class="col-md-6">
       <h2>予定を追加</h2>
       <form action="/calendar/add" method="post">
+        <input type="hidden" name="date" value="<%= selectedDate %>" />
         <div class="form-group">
           <label>予定名</label>
           <input required type="text" name="title" class="form-control" placeholder="予定のタイトル" />
@@ -132,9 +134,10 @@
 <% if (alerts && alerts.length > 0) { %>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
-    var calendarAlerts = <%- JSON.stringify(alerts) %>;
+    var calendarAlerts = <%- JSON.stringify(alerts).replace(/</g, '\\u003c').replace(/>/g, '\\u003e') %>;
     calendarAlerts.forEach(function (item) {
-      alert('通知: ' + item.event_date + ' の "' + item.title.replace(/"/g, '\\"') + '" が近づいています。');
+      var safeTitle = item.title.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      alert('通知: ' + item.event_date + ' の "' + safeTitle + '" が近づいています。');
     });
   });
 </script>

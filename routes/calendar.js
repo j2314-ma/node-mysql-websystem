@@ -17,6 +17,15 @@ router.get('/', async function (req, res, next) {
   const monthStart = new Date(year, month, 1).toISOString().slice(0, 10);
   const monthEnd = new Date(year, month + 1, 0).toISOString().slice(0, 10);
 
+  const successMessage = req.session?.successMessage ? [req.session.successMessage] : [];
+  const errorMessage = req.session?.errorMessage || [];
+  if (req.session?.successMessage) {
+    delete req.session.successMessage;
+  }
+  if (req.session?.errorMessage) {
+    delete req.session.errorMessage;
+  }
+
   try {
     const events = await knex('events')
       .where('user_id', userId)
@@ -49,12 +58,9 @@ router.get('/', async function (req, res, next) {
       selectedDate: validDate.toISOString().slice(0, 10),
       events: events,
       alerts: alerts,
-      successMessage: req.session?.successMessage ? [req.session.successMessage] : [],
-      errorMessage: [],
+      successMessage: successMessage,
+      errorMessage: errorMessage,
     });
-    if (req.session?.successMessage) {
-      delete req.session.successMessage;
-    }
   } catch (err) {
     console.error(err);
     res.render('calendar', {
@@ -78,6 +84,8 @@ router.post('/add', function (req, res, next) {
   const title = req.body.title?.trim();
   const description = req.body.description?.trim() || null;
   const eventDate = req.body.event_date;
+  const selectedDate = req.body.date || eventDate || new Date().toISOString().slice(0, 10);
+  const redirectUrl = '/calendar?date=' + encodeURIComponent(selectedDate);
 
   const notifyPopup = req.body.notify_popup === '1';
   const notifyEmail = req.body.notify_email === '1';
@@ -87,19 +95,11 @@ router.post('/add', function (req, res, next) {
   const notifySmsInterval = notifySms ? req.body.notify_sms_interval : 'none';
 
   if (!title || !eventDate) {
-    req.session.successMessage = null;
-    return res.render('calendar', {
-      title: 'Calendar',
-      isAuth: true,
-      selectedDate: eventDate || new Date().toISOString().slice(0, 10),
-      events: [],
-      alerts: [],
-      errorMessage: ['予定名と日時を入力してください'],
-      successMessage: [],
-    });
+    req.session.errorMessage = ['予定名と日時を入力してください'];
+    return res.redirect(redirectUrl);
   }
 
-  knex('events')
+  return knex('events')
     .insert({
       user_id: userId,
       title: title,
@@ -114,18 +114,12 @@ router.post('/add', function (req, res, next) {
     })
     .then(function () {
       req.session.successMessage = '予定を追加しました';
-      res.redirect('/calendar');
+      res.redirect(redirectUrl);
     })
     .catch(function (err) {
       console.error(err);
-      res.render('calendar', {
-        title: 'Calendar',
-        isAuth: true,
-        selectedDate: eventDate,
-        events: [],
-        errorMessage: [err.sqlMessage || '予定の追加に失敗しました'],
-        successMessage: [],
-      });
+      req.session.errorMessage = [err.sqlMessage || '予定の追加に失敗しました'];
+      res.redirect(redirectUrl);
     });
 });
 
@@ -136,24 +130,20 @@ router.post('/delete', function (req, res, next) {
 
   const userId = req.user.id;
   const eventId = req.body.id;
+  const selectedDate = req.body.date || new Date().toISOString().slice(0, 10);
+  const redirectUrl = '/calendar?date=' + encodeURIComponent(selectedDate);
 
   knex('events')
     .where({ id: eventId, user_id: userId })
     .del()
     .then(function () {
       req.session.successMessage = '予定を削除しました';
-      res.redirect('/calendar');
+      res.redirect(redirectUrl);
     })
     .catch(function (err) {
       console.error(err);
-      res.render('calendar', {
-        title: 'Calendar',
-        isAuth: true,
-        selectedDate: new Date().toISOString().slice(0, 10),
-        events: [],
-        errorMessage: [err.sqlMessage || '予定の削除に失敗しました'],
-        successMessage: [],
-      });
+      req.session.errorMessage = [err.sqlMessage || '予定の削除に失敗しました'];
+      res.redirect(redirectUrl);
     });
 });
 
